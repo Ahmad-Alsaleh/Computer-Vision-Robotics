@@ -9,7 +9,9 @@ class ObjectDetector:
         self.model = YOLO("./yolov8n.pt")
         self.device = device
 
-    def __draw_bounding_boxes(self, frame: np.ndarray, detection: Results) -> None:
+    def __draw_bounding_boxes_in_frame(
+        self, frame: np.ndarray, detection: Results
+    ) -> None:
         for box in detection.boxes:
             x_min, y_min, x_max, y_max = map(int, box.xyxy[0])
             confidence = int(box.conf)
@@ -35,7 +37,7 @@ class ObjectDetector:
                 thickness=2,
             )
 
-    def detect_objects(self, video_path: str) -> None:
+    def show_video_with_bounding_boxes(self, video_path: str) -> None:
         video = cv2.VideoCapture(video_path)
 
         while True:
@@ -47,7 +49,7 @@ class ObjectDetector:
             detections = self.model(frame, stream=True, device=self.device)
 
             for detection in detections:
-                self.__draw_bounding_boxes(frame, detection)
+                self.__draw_bounding_boxes_in_frame(frame, detection)
 
             cv2.imshow("Frame with Bounding Boxes", frame)
 
@@ -64,4 +66,4 @@ if __name__ == "__main__":
     # Below is a simple example to detect objects in a video.
     # Use "mps" as a device for MacBooks and "cuda" for Nvidia GPUs.
     detector = ObjectDetector(device="mps")
-    detector.detect_objects("./videos/football.mp4")
+    detector.show_video_with_bounding_boxes("./videos/football.mp4")
