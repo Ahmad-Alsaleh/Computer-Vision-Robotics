@@ -65,5 +65,6 @@ class ObjectDetector:
 if __name__ == "__main__":
     # Below is a simple example to detect objects in a video.
     # Use "mps" as a device for MacBooks and "cuda" for Nvidia GPUs.
+    # Hold 'q' to exit
     detector = ObjectDetector(device="mps")
     detector.show_video_with_bounding_boxes("./videos/football.mp4")
