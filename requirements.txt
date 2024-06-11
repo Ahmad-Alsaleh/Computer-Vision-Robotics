@@ -1,0 +1,7 @@
+ultralytics==8.2.30
+ftfy
+regex
+tqdm==4.66.4
+git+https://github.com/openai/CLIP.git
+numpy
+opencv-python
