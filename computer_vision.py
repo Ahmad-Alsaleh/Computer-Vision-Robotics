@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 from typing import List, Optional
+import torch
 import numpy as np
 from ultralytics import YOLO
 from ultralytics.engine.results import Results, Boxes
 import cv2
 from rich import print
+from similarity_finder import SimilarityFinder
 
 
 @dataclass
@@ -29,20 +31,25 @@ class DetectedObject:
     confidence: float
     point1: Point
     point2: Point
-    class_name_embedding: Optional[np.ndarray] = None
+    embedded_class_name: torch.Tensor
 
 
 class ObjectDetector:
     def __init__(self, yolo_version="yolov8n.pt", device="cuda") -> None:
         self.model = YOLO(yolo_version)
         self.device = device
+        self.similarity_finder = SimilarityFinder(device=device)
 
     def __box_to_detected_object(self, box: Boxes) -> DetectedObject:
+        class_name = self.model.names[int(box.cls)]
+        embedded_class_name = self.similarity_finder.embed_text(class_name)
+
         return DetectedObject(
-            class_name=self.model.names[int(box.cls)],
+            class_name=class_name,
             confidence=float(box.conf),
             point1=Point(*map(int, box.xyxy[0, :2])),
             point2=Point(*map(int, box.xyxy[0, 2:])),
+            embedded_class_name=embedded_class_name,
         )
 
     def __draw_bounding_boxes_in_frame(
