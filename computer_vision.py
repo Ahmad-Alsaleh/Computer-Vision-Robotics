@@ -1,7 +1,32 @@
+from dataclasses import dataclass
 import numpy as np
 from ultralytics import YOLO
-from ultralytics.engine.results import Results
+from ultralytics.engine.results import Results, Boxes
 import cv2
+
+
+@dataclass
+class Point:
+    x: int
+    y: int
+
+    def __len__(self):
+        return 2
+
+    def __getitem__(self, index):
+        return [self.x, self.y][index]
+
+    def __iter__(self):
+        yield self.x
+        yield self.y
+
+
+@dataclass
+class DetectedObject:
+    class_name: str
+    confidence: float
+    point1: Point
+    point2: Point
 
 
 class ObjectDetector:
@@ -9,28 +34,33 @@ class ObjectDetector:
         self.model = YOLO("./yolov8n.pt")
         self.device = device
 
+    def __box_to_detected_object(self, box: Boxes) -> DetectedObject:
+        return DetectedObject(
+            class_name=self.model.names[int(box.cls)],
+            confidence=int(box.conf),
+            point1=Point(*map(int, box.xyxy[0, :2])),
+            point2=Point(*map(int, box.xyxy[0, 2:])),
+        )
+
     def __draw_bounding_boxes_in_frame(
         self, frame: np.ndarray, detection: Results
     ) -> None:
         for box in detection.boxes:
-            x_min, y_min, x_max, y_max = map(int, box.xyxy[0])
-            confidence = int(box.conf)
-
-            class_id = int(box.cls)
+            detected_object = self.__box_to_detected_object(box)
 
             cv2.rectangle(
                 frame,
-                (x_min, y_min),
-                (x_max, y_max),
+                detected_object.point1,
+                detected_object.point2,
                 color=(255, 0, 0),
                 thickness=2,
             )
 
-            label = f"{self.model.names[class_id]}: {confidence:.2f}"
+            label = f"{detected_object.class_name}: {detected_object.confidence:.2f}"
             cv2.putText(
                 frame,
                 label,
-                org=(x_min, y_min - 5),
+                org=(detected_object.point1.x, detected_object.point1.y - 5),
                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                 fontScale=0.5,
                 color=(255, 0, 0),
@@ -62,9 +92,9 @@ class ObjectDetector:
         cv2.destroyAllWindows()
 
 
+# Below is a simple example to detect objects in a video.
+# Use "mps" as a device for MacBooks and "cuda" for Nvidia GPUs.
+# Hold 'q' to exit
 if __name__ == "__main__":
-    # Below is a simple example to detect objects in a video.
-    # Use "mps" as a device for MacBooks and "cuda" for Nvidia GPUs.
-    # Hold 'q' to exit
     detector = ObjectDetector(device="mps")
     detector.show_video_with_bounding_boxes("./videos/football.mp4")
